@@ -127,13 +127,13 @@
         formatado = formatado.replace(/\s+(Art\.)/g, '\n\n$1');
 
         // ETAPA 3: Quebrar Incisos (Algarismos romanos com hífen)
-        formatado = formatado.replace(/\s+([IVXLCDM]+\s*-)/g, '\n$1');
+        formatado = formatado.replace(/\s+([IVXLCDM]+\s*-)/g, '\n\n$1');
 
         // ETAPA 4: Quebrar Parágrafos
-        formatado = formatado.replace(/\s+(§\s*\d+(?:º|°|o)?|Parágrafo\s+único)/gi, '\n$1');
+        formatado = formatado.replace(/\s+(§\s*\d+(?:º|°|o)?|Parágrafo\s+único)/gi, '\n\n$1');
 
         // ETAPA 5: Quebrar Alíneas (Letra minúscula seguida de parêntese, ex: a) b) c) )
-        formatado = formatado.replace(/\s+([a-z]\))/g, '\n$1');
+        formatado = formatado.replace(/\s+([a-z]\))/g, '\n\n$1');
 
         // ETAPA 6: CORREÇÃO INTELIGENTE DE REMISSÕES (A "Varredura Mágica")
         // Lista de palavras que indicam que uma citação está acontecendo e não devemos quebrar a linha
