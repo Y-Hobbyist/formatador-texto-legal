@@ -57,6 +57,7 @@
             justify-content: space-between;
             margin-top: 15px;
             margin-bottom: 15px;
+            gap: 10px; /* Espaçamento entre os botões */
         }
         button {
             padding: 10px 20px;
@@ -66,12 +67,11 @@
             cursor: pointer;
             transition: background-color 0.3s;
             font-weight: bold;
+            flex-grow: 1; /* Faz os botões dividirem o espaço igualmente */
         }
         .btn-format {
             background-color: #3498db;
             color: white;
-            flex-grow: 1;
-            margin-right: 10px;
         }
         .btn-format:hover {
             background-color: #2980b9;
@@ -83,18 +83,26 @@
         .btn-copy:hover {
             background-color: #27ae60;
         }
+        .btn-clear {
+            background-color: #e74c3c;
+            color: white;
+        }
+        .btn-clear:hover {
+            background-color: #c0392b;
+        }
     </style>
 </head>
 <body>
 
 <div class="container">
     <h1>⚖️ Formatador de Textos Legais</h1>
-    <p class="subtitle">Cole o texto do PDF abaixo para remover quebras de página e corrigir a formatação de Artigos, Incisos e Parágrafos.</p>
+    <p class="subtitle">Cole o texto do PDF abaixo para remover quebras de página e corrigir a formatação.</p>
 
     <label for="inputText">Texto Original (Cole do PDF):</label>
     <textarea id="inputText" placeholder="Cole o texto aqui..."></textarea>
 
     <div class="button-group">
+        <button class="btn-clear" onclick="limparTextos()">Limpar Tudo</button>
         <button class="btn-format" onclick="formatarTexto()">Formatar Texto</button>
         <button class="btn-copy" onclick="copiarTexto()">Copiar Resultado</button>
     </div>
@@ -112,25 +120,34 @@
             return;
         }
 
-        // ETAPA 1: Substituir quebras de linha por espaços e remover espaços múltiplos
+        // ETAPA 1: Limpeza Inicial
         let formatado = texto.replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ').trim();
 
-        // ETAPA 2: Inserir quebra de linhas entre artigos
-        // Procura por " Art." e insere duas quebras de linha para destacar bem
+        // ETAPA 2: Artigos
         formatado = formatado.replace(/\s+(Art\.)/g, '\n\n$1');
+        // Corrige falsos positivos em Artigos (ex: "no Art.")
+        formatado = formatado.replace(/(,\s*|\b(?:no|nos|do|dos|ao|aos|o|os|e|§|§§)\s+)\n\n(Art\.)/gi, '$1$2');
 
-        // ETAPA 3: Inserir quebra de linha entre incisos (I - , II - , ..., CD - )
-        // Procura algarismos romanos seguidos de hífen
+        // ETAPA 3: Incisos
         formatado = formatado.replace(/\s+([IVXLCDM]+\s*-)/g, '\n$1');
 
-        // ETAPA 4 e 5: Inserir quebra de linha entre parágrafos (com ou sem º)
-        // Cobre § 1º, § 10, etc (o ?:º|°|o lida com diferentes tipos de "bolinhas" de grau)
+        // ETAPA 4 e 5: Parágrafos
         formatado = formatado.replace(/\s+(§\s*\d+(?:º|°|o)?)/g, '\n$1');
-        
-        // Bônus: Quebra de linha para Parágrafo único
         formatado = formatado.replace(/\s+(Parágrafo\s+único)/gi, '\n$1');
 
+        // ETAPA 6: CORREÇÃO DE REMISSÕES
+        // Se antes da quebra do parágrafo houver vírgula ou palavras de ligação, desfaz a quebra.
+        // Cobre exemplos como: "art. 11, § 1º", "no § 2º", "do Parágrafo único"
+        const regexRemissoes = /(,\s*|\b(?:no|nos|do|dos|ao|aos|o|os|e|art\.|arts\.|inciso|incisos)\s+)\n(§|Parágrafo\s+único)/gi;
+        formatado = formatado.replace(regexRemissoes, '$1$2');
+
         document.getElementById('outputText').value = formatado;
+    }
+
+    function limparTextos() {
+        document.getElementById('inputText').value = '';
+        document.getElementById('outputText').value = '';
+        document.getElementById('inputText').focus(); // Volta o cursor piscando para a primeira caixa
     }
 
     function copiarTexto() {
@@ -142,7 +159,7 @@
         }
 
         outputText.select();
-        outputText.setSelectionRange(0, 99999); // Para dispositivos móveis
+        outputText.setSelectionRange(0, 99999); 
         
         navigator.clipboard.writeText(outputText.value).then(() => {
             alert("Texto copiado para a área de transferência!");
