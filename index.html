@@ -190,22 +190,39 @@
         }
 
         // ETAPA 1: Limpeza Inicial (transforma tudo num bloco só de texto)
+        // 1º replace: Localiza todas as quebras de linha ou de página do PDF ([\r\n]+) e troca por um espaço.
+        // 2º replace: Localiza qualquer sequência de espaços em branco duplos ou maiores (\s+) e reduz para um espaço só.
+        // trim(): Remove espaços vazios que tenham sobrado no início ou no fim de todo o texto.
         let formatado = texto.replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ').trim();
 
         // ETAPA 2: Quebrar Artigos (Dupla quebra para destaque)
+        // Procura por espaços (\s+) seguidos exatamente pela palavra "Art."
+        // O $1 captura o "Art." e o devolve acompanhado de duas quebras de linha (\n\n) para separá-lo do bloco anterior.
         formatado = formatado.replace(/\s+(Art\.)/g, '\n\n$1');
 
         // ETAPA 3: Quebrar Incisos (Algarismos romanos com hífen)
+        // A classe [IVXLCDM]+ garante que ele encontre apenas letras romanas (uma ou mais vezes).
+        // Em seguida, procura espaços opcionais (\s*) e o hífen obrigatório (-).
         formatado = formatado.replace(/\s+([IVXLCDM]+\s*-)/g, '\n\n$1');
 
         // ETAPA 4: Quebrar Parágrafos
+        // O símbolo "|" significa "OU". Então ele procura:
+        // Opção A: O símbolo §, seguido de espaços, números (\d+) e um indicador ordinal opcional (º, °, ou o).
+        // Opção B: A frase "Parágrafo único".
+        // O "i" no final (/gi) faz a busca ignorar se a letra está maiúscula ou minúscula (case-insensitive).
         formatado = formatado.replace(/\s+(§\s*\d+(?:º|°|o)?|Parágrafo\s+único)/gi, '\n\n$1');
 
         // ETAPA 5: Quebrar Alíneas (Letra minúscula seguida de parêntese, ex: a) b) c) )
+        // Procura um espaço (\s+) seguido de exatamente uma letra de "a" até "z" ([a-z]), acompanhada do parêntese de fechamento \).
+        // A barra invertida antes do parêntese é usada porque na Regex o parêntese puro serve para criar grupos, então o \ avisa que é texto literal.
         formatado = formatado.replace(/\s+([a-z]\))/g, '\n\n$1');
 
-        // ETAPA 6: CORREÇÃO INTELIGENTE DE REMISSÕES (A "Varredura Mágica")
-        const regexRemissoes = /(,\s*|\b(?:no|nos|na|nas|do|dos|da|das|ao|aos|à|às|o|os|a|as|e|ou|inciso|incisos|alínea|alíneas|caput)\b|\b(?:art\.|arts\.)|§§?)\n+(Art\.|[IVXLCDM]+\s*-|§|Parágrafo\s+único|[a-z]\))/gi;
+        // ETAPA 6: Quebrar Penas (comum em legislação penal/ambiental, ex: "Pena - " ou "Penas: ")
+        // Procura a palavra Pena ou Penas, seguida de espaços opcionais e um hífen ou dois pontos.
+        formatado = formatado.replace(/\s+(Pena(?:s)?\s*[-:])/gi, '\n\n$1');
+
+        // ETAPA 7: CORREÇÃO INTELIGENTE DE REMISSÕES (A "Varredura Mágica")
+        const regexRemissoes = /(,\s*|\b(?:no|nos|na|nas|do|dos|da|das|ao|aos|à|às|o|os|a|as|e|ou|inciso|incisos|alínea|alíneas|caput|sob)\b|\b(?:art\.|arts\.)|§§?)\n+(Art\.|[IVXLCDM]+\s*-|§|Parágrafo\s+único|[a-z]\)|Pena(?:s)?\s*[-:])/gi;
         
         let temp = "";
         while (temp !== formatado) {
