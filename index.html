@@ -57,7 +57,7 @@
             justify-content: space-between;
             margin-top: 15px;
             margin-bottom: 15px;
-            gap: 10px; /* Espaçamento entre os botões */
+            gap: 10px;
         }
         button {
             padding: 10px 20px;
@@ -67,7 +67,7 @@
             cursor: pointer;
             transition: background-color 0.3s;
             font-weight: bold;
-            flex-grow: 1; /* Faz os botões dividirem o espaço igualmente */
+            flex-grow: 1;
         }
         .btn-format {
             background-color: #3498db;
@@ -96,7 +96,7 @@
 
 <div class="container">
     <h1>⚖️ Formatador de Textos Legais</h1>
-    <p class="subtitle">Cole o texto do PDF abaixo para remover quebras de página e corrigir a formatação.</p>
+    <p class="subtitle">Cole o texto do PDF abaixo para remover quebras de página e corrigir a formatação de Artigos, Incisos, Parágrafos e Alíneas.</p>
 
     <label for="inputText">Texto Original (Cole do PDF):</label>
     <textarea id="inputText" placeholder="Cole o texto aqui..."></textarea>
@@ -120,26 +120,34 @@
             return;
         }
 
-        // ETAPA 1: Limpeza Inicial
+        // ETAPA 1: Limpeza Inicial (transforma tudo num bloco só de texto)
         let formatado = texto.replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ').trim();
 
-        // ETAPA 2: Artigos
+        // ETAPA 2: Quebrar Artigos (Dupla quebra para destaque)
         formatado = formatado.replace(/\s+(Art\.)/g, '\n\n$1');
-        // Corrige falsos positivos em Artigos (ex: "no Art.")
-        formatado = formatado.replace(/(,\s*|\b(?:no|nos|do|dos|ao|aos|o|os|e|§|§§)\s+)\n\n(Art\.)/gi, '$1$2');
 
-        // ETAPA 3: Incisos
+        // ETAPA 3: Quebrar Incisos (Algarismos romanos com hífen)
         formatado = formatado.replace(/\s+([IVXLCDM]+\s*-)/g, '\n$1');
 
-        // ETAPA 4 e 5: Parágrafos
-        formatado = formatado.replace(/\s+(§\s*\d+(?:º|°|o)?)/g, '\n$1');
-        formatado = formatado.replace(/\s+(Parágrafo\s+único)/gi, '\n$1');
+        // ETAPA 4: Quebrar Parágrafos
+        formatado = formatado.replace(/\s+(§\s*\d+(?:º|°|o)?|Parágrafo\s+único)/gi, '\n$1');
 
-        // ETAPA 6: CORREÇÃO DE REMISSÕES
-        // Se antes da quebra do parágrafo houver vírgula ou palavras de ligação, desfaz a quebra.
-        // Cobre exemplos como: "art. 11, § 1º", "no § 2º", "do Parágrafo único"
-        const regexRemissoes = /(,\s*|\b(?:no|nos|do|dos|ao|aos|o|os|e|art\.|arts\.|inciso|incisos)\s+)\n(§|Parágrafo\s+único)/gi;
-        formatado = formatado.replace(regexRemissoes, '$1$2');
+        // ETAPA 5: Quebrar Alíneas (Letra minúscula seguida de parêntese, ex: a) b) c) )
+        formatado = formatado.replace(/\s+([a-z]\))/g, '\n$1');
+
+        // ETAPA 6: CORREÇÃO INTELIGENTE DE REMISSÕES (A "Varredura Mágica")
+        // Lista de palavras que indicam que uma citação está acontecendo e não devemos quebrar a linha
+        const regexRemissoes = /(,\s*|\b(?:no|nos|na|nas|do|dos|da|das|ao|aos|à|às|o|os|a|as|e|ou|inciso|incisos|alínea|alíneas|caput)\b|\b(?:art\.|arts\.)|§§?)\n+(Art\.|[IVXLCDM]+\s*-|§|Parágrafo\s+único|[a-z]\))/gi;
+        
+        // Fica rodando a correção até ter certeza de que nenhuma remissão ficou com quebra de linha
+        let temp = "";
+        while (temp !== formatado) {
+            temp = formatado;
+            formatado = formatado.replace(regexRemissoes, (match, p1, p2) => {
+                // p1 é a palavra de ligação (ex: "do", "e", ","). p2 é o artigo/parágrafo.
+                return p1.trim() + ' ' + p2;
+            });
+        }
 
         document.getElementById('outputText').value = formatado;
     }
@@ -147,7 +155,7 @@
     function limparTextos() {
         document.getElementById('inputText').value = '';
         document.getElementById('outputText').value = '';
-        document.getElementById('inputText').focus(); // Volta o cursor piscando para a primeira caixa
+        document.getElementById('inputText').focus();
     }
 
     function copiarTexto() {
